@@ -10,20 +10,31 @@ import Form from "@components/Form";
 const UpdatePrompt = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const promptId = searchParams.get("id");
 
-  const [post, setPost] = useState({ prompt: "", tag: "", });
+  const [promptId, setPromptId] = useState(null);
+  const [post, setPost] = useState({ prompt: "", tag: "" });
   const [submitting, setIsSubmitting] = useState(false);
 
+  // Get prompt ID from URL after hydration (avoids Suspense requirement)
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) setPromptId(id);
+  }, [searchParams]);
+
+  // Fetch prompt details when ID is set
   useEffect(() => {
     const getPromptDetails = async () => {
-      const response = await fetch(`/api/prompt/${promptId}`);
-      const data = await response.json();
+      try {
+        const response = await fetch(`/api/prompt/${promptId}`);
+        const data = await response.json();
 
-      setPost({
-        prompt: data.prompt,
-        tag: data.tag,
-      });
+        setPost({
+          prompt: data.prompt || "",
+          tag: data.tag || "",
+        });
+      } catch (err) {
+        console.error("Error fetching prompt:", err);
+      }
     };
 
     if (promptId) getPromptDetails();
@@ -33,22 +44,20 @@ const UpdatePrompt = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!promptId) return alert("Missing PromptId!");
+    if (!promptId) {
+      alert("Missing PromptId!");
+      return;
+    }
 
     try {
       const response = await fetch(`/api/prompt/${promptId}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          prompt: post.prompt,
-          tag: post.tag,
-        }),
+        body: JSON.stringify(post),
       });
 
-      if (response.ok) {
-        router.push("/");
-      }
+      if (response.ok) router.push("/");
     } catch (error) {
-      console.log(error);
+      console.error("Error updating prompt:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -56,7 +65,7 @@ const UpdatePrompt = () => {
 
   return (
     <Form
-      type='Edit'
+      type="Edit"
       post={post}
       setPost={setPost}
       submitting={submitting}
