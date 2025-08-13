@@ -5,7 +5,7 @@ import Provider from '@components/Provider'
 import { SessionProvider } from 'next-auth/react'
 
 export const metadata ={
-    title:"Promptopia",
+    title:"PromptStore",
     description:"Discover & Share AI Prompts",
 }
 

@@ -1,65 +1,52 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useEffect, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-
 import Form from "@components/Form";
 
-const UpdatePrompt = () => {
-  const router = useRouter();
+function UpdatePromptContent() {
   const searchParams = useSearchParams();
+  const promptId = searchParams.get("id");
 
-  const [promptId, setPromptId] = useState(null);
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
   const [post, setPost] = useState({ prompt: "", tag: "" });
-  const [submitting, setIsSubmitting] = useState(false);
 
-  // Get prompt ID from URL after hydration (avoids Suspense requirement)
-  useEffect(() => {
-    const id = searchParams.get("id");
-    if (id) setPromptId(id);
-  }, [searchParams]);
-
-  // Fetch prompt details when ID is set
   useEffect(() => {
     const getPromptDetails = async () => {
-      try {
-        const response = await fetch(`/api/prompt/${promptId}`);
-        const data = await response.json();
-
-        setPost({
-          prompt: data.prompt || "",
-          tag: data.tag || "",
-        });
-      } catch (err) {
-        console.error("Error fetching prompt:", err);
-      }
+      if (!promptId) return;
+      const response = await fetch(`/api/prompt/${promptId}`);
+      const data = await response.json();
+      setPost({
+        prompt: data.prompt,
+        tag: data.tag,
+      });
     };
-
-    if (promptId) getPromptDetails();
+    getPromptDetails();
   }, [promptId]);
 
   const updatePrompt = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setSubmitting(true);
 
-    if (!promptId) {
-      alert("Missing PromptId!");
-      return;
-    }
+    if (!promptId) return alert("Missing PromptId!");
 
     try {
       const response = await fetch(`/api/prompt/${promptId}`, {
         method: "PATCH",
-        body: JSON.stringify(post),
+        body: JSON.stringify({
+          prompt: post.prompt,
+          tag: post.tag,
+        }),
       });
 
-      if (response.ok) router.push("/");
+      if (response.ok) {
+        router.push("/");
+      }
     } catch (error) {
-      console.error("Error updating prompt:", error);
+      console.error(error);
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -72,6 +59,12 @@ const UpdatePrompt = () => {
       handleSubmit={updatePrompt}
     />
   );
-};
+}
 
-export default UpdatePrompt;
+export default function UpdatePromptPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UpdatePromptContent />
+    </Suspense>
+  );
+}
